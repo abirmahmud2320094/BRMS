@@ -1,0 +1,2 @@
+import { Search } from 'lucide-react'
+export default function DataToolbar({ search, setSearch, right }) { return <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="relative w-full max-w-sm"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/><input className="field pl-9" placeholder="Search records…" value={search} onChange={e=>setSearch(e.target.value)}/></div>{right}</div> }

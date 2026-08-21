@@ -1,0 +1,2 @@
+import { Link } from 'react-router-dom'
+export default function NotFound(){return <div className="card p-10 text-center"><p className="text-6xl font-extrabold text-slate-200">404</p><h1 className="mt-4 text-xl font-extrabold">Page not found</h1><p className="mt-2 text-sm text-slate-500">The requested BRMS workspace does not exist.</p><Link to="/" className="btn-primary mt-5">Back to dashboard</Link></div>}

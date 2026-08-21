@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: brms-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/system/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.13
+      - key: AUTH_MODE
+        value: firebase
+      - key: DATA_MODE
+        value: firebase
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

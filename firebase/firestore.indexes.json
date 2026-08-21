@@ -1,0 +1,46 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "floors",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "building_id", "order": "ASCENDING" },
+        { "fieldPath": "level", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "shops",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "floor_id", "order": "ASCENDING" },
+        { "fieldPath": "shop_number", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tenancies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shop_id", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "rent_payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenancy_id", "order": "ASCENDING" },
+        { "fieldPath": "accounting_month", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "utility_bills",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "shop_id", "order": "ASCENDING" },
+        { "fieldPath": "utility_type", "order": "ASCENDING" },
+        { "fieldPath": "accounting_month", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,2 @@
+import { Inbox } from 'lucide-react'
+export default function EmptyState({ title='No records yet', text='Create your first record to get started.' }) { return <div className="py-16 text-center"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"><Inbox/></div><h3 className="mt-4 font-bold text-slate-800">{title}</h3><p className="mt-1 text-sm text-slate-500">{text}</p></div> }

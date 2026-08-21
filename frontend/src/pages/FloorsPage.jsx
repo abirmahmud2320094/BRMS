@@ -1,0 +1,3 @@
+import ResourcePage from '../components/ResourcePage'
+const config={title:'Floor Management',subtitle:'Structure the building into clearly managed commercial levels.',singular:'Floor',endpoint:'/floors',rowName:r=>r.name,columns:[{key:'name',label:'Floor'},{key:'level',label:'Level'},{key:'building_id',label:'Building',lookup:{endpoint:'/buildings',label:x=>x.name}},{key:'description',label:'Description'}],formFields:[{name:'building_id',label:'Building',type:'select',lookup:{endpoint:'/buildings',label:x=>x.name}},{name:'name',label:'Floor name'},{name:'level',label:'Level number',type:'number'},{name:'description',label:'Description',type:'textarea',optional:true,full:true}]}
+export default function FloorsPage(){return <ResourcePage config={config}/>}

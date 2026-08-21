@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // BRMS business data is intentionally accessed through FastAPI only.
+    // Firebase Admin SDK calls from the backend bypass these client rules.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
