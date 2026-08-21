@@ -9,7 +9,13 @@ Use Python 3.12 with:
 - Root directory: `backend`
 - Install: `pip install -r requirements.txt`
 - Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-- Health: `/api/v1/system/health`
+- Liveness health: `/api/v1/system/health`
+- Firestore readiness: `/api/v1/system/readiness`
+
+The liveness endpoint never performs a remote Firestore request, so platform
+health checks remain responsive during a provider outage. The readiness
+endpoint performs a timeout-bounded Firestore check when end-to-end storage
+verification is needed.
 
 Configure these as platform secrets/environment variables:
 
@@ -18,6 +24,7 @@ AUTH_MODE=firebase
 DATA_MODE=firebase
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_SERVICE_ACCOUNT_JSON=<platform-secret>
+FIREBASE_OPERATION_TIMEOUT_SECONDS=5
 CORS_ORIGINS=https://your-project.web.app,https://your-project.firebaseapp.com
 ```
 

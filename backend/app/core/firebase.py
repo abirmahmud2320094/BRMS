@@ -18,7 +18,9 @@ def get_firebase_app():
     if firebase_admin._apps:
         return firebase_admin.get_app()
 
-    options = {"projectId": settings.firebase_project_id} if settings.firebase_project_id else None
+    options = {"httpTimeout": settings.firebase_operation_timeout_seconds}
+    if settings.firebase_project_id:
+        options["projectId"] = settings.firebase_project_id
     if settings.firebase_service_account_json:
         try:
             service_account = json.loads(settings.firebase_service_account_json)

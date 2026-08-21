@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import List, Optional, Union
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     firebase_project_id: Optional[str] = None
     google_application_credentials: Optional[str] = None
     firebase_service_account_json: Optional[str] = None
+    firebase_operation_timeout_seconds: float = Field(default=5.0, ge=1.0, le=30.0)
 
     seed_admin_email: str = "admin@brms.local"
     seed_admin_password: str = "ChangeMe123!"

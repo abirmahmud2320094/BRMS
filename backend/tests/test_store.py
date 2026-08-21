@@ -85,8 +85,10 @@ class FakeCollection:
     def __init__(self, snapshots=None, error=None):
         self.snapshots = snapshots or []
         self.error = error
+        self.stream_kwargs = None
 
-    def stream(self):
+    def stream(self, **kwargs):
+        self.stream_kwargs = kwargs
         if self.error:
             raise self.error
         return iter(self.snapshots)
@@ -106,23 +108,31 @@ class FakeFirestoreClient:
 def test_firestore_records_are_json_safe():
     timestamp = datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc)
     store = object.__new__(FirestoreStore)
-    store.db = FakeFirestoreClient(FakeCollection([FakeSnapshot("one", {"created_at": timestamp})]))
+    collection = FakeCollection([FakeSnapshot("one", {"created_at": timestamp})])
+    store.db = FakeFirestoreClient(collection)
+    store.operation_timeout = 4.0
     assert store.list("users") == [{"id": "one", "created_at": "2026-08-20T12:00:00Z"}]
+    assert collection.stream_kwargs == {"retry": None, "timeout": 4.0}
 
 
 def test_firestore_connectivity_errors_are_sanitized():
     store = object.__new__(FirestoreStore)
-    store.db = FakeFirestoreClient(FakeCollection(error=RuntimeError("sensitive provider details")))
+    collection = FakeCollection(error=RuntimeError("sensitive provider details"))
+    store.db = FakeFirestoreClient(collection)
+    store.operation_timeout = 2.5
     with pytest.raises(StoreUnavailable, match="connectivity, credentials, and required indexes"):
         store.health_check()
+    assert collection.stream_kwargs == {"retry": None, "timeout": 2.5}
 
 
 def test_firestore_transaction_document_unwraps_sdk_generator():
     snapshot = FakeSnapshot("one", {"status": "active"})
 
     class FakeTransaction:
-        def get(self, reference):
+        def get(self, reference, **kwargs):
+            assert kwargs == {"retry": None, "timeout": 3.0}
             return iter([snapshot])
 
     store = object.__new__(FirestoreStore)
+    store.operation_timeout = 3.0
     assert store._transaction_document(FakeTransaction(), object()) is snapshot

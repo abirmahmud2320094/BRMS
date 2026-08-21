@@ -264,6 +264,7 @@ class LocalJsonStore:
 
 class FirestoreStore:
     def __init__(self):
+        self.operation_timeout = get_settings().firebase_operation_timeout_seconds
         try:
             self.db = get_firestore_client()
         except Exception as exc:
@@ -285,7 +286,10 @@ class FirestoreStore:
         return query
 
     def _transaction_document(self, transaction, reference):
-        return next(transaction.get(reference), None)
+        return next(
+            transaction.get(reference, retry=None, timeout=self.operation_timeout),
+            None,
+        )
 
     def _document(self, snapshot) -> Dict[str, Any]:
         return _record(snapshot.id, snapshot.to_dict() or {})
@@ -299,20 +303,35 @@ class FirestoreStore:
 
     def health_check(self):
         try:
-            next(self.db.collection("users").limit(1).stream(), None)
+            next(
+                self.db.collection("users").limit(1).stream(
+                    retry=None,
+                    timeout=self.operation_timeout,
+                ),
+                None,
+            )
             return True
         except Exception as exc:
             self._raise_operation_error(exc)
 
     def list(self, collection: str) -> List[Dict[str, Any]]:
         try:
-            return [self._document(doc) for doc in self.db.collection(collection).stream()]
+            return [
+                self._document(doc)
+                for doc in self.db.collection(collection).stream(
+                    retry=None,
+                    timeout=self.operation_timeout,
+                )
+            ]
         except Exception as exc:
             self._raise_operation_error(exc)
 
     def get(self, collection: str, doc_id: str) -> Optional[Dict[str, Any]]:
         try:
-            snapshot = self.db.collection(collection).document(doc_id).get()
+            snapshot = self.db.collection(collection).document(doc_id).get(
+                retry=None,
+                timeout=self.operation_timeout,
+            )
             return self._document(snapshot) if snapshot.exists else None
         except Exception as exc:
             self._raise_operation_error(exc)
@@ -325,7 +344,7 @@ class FirestoreStore:
             data = _serialize(payload)
             data.setdefault("created_at", firestore.SERVER_TIMESTAMP)
             data.setdefault("updated_at", firestore.SERVER_TIMESTAMP)
-            ref.create(data)
+            ref.create(data, retry=None, timeout=self.operation_timeout)
             return self.get(collection, ref.id)
         except Exception as exc:
             self._raise_operation_error(exc)
@@ -335,7 +354,7 @@ class FirestoreStore:
         query = self._query(collection, unique_filters)
 
         def operation(transaction):
-            if list(transaction.get(query)):
+            if list(transaction.get(query, retry=None, timeout=self.operation_timeout)):
                 raise StoreConflict(detail)
             from firebase_admin import firestore
 
@@ -354,9 +373,13 @@ class FirestoreStore:
             from firebase_admin import firestore
 
             ref = self.db.collection(collection).document(doc_id)
-            if not ref.get().exists:
+            if not ref.get(retry=None, timeout=self.operation_timeout).exists:
                 return None
-            ref.update({**_serialize(payload), "updated_at": firestore.SERVER_TIMESTAMP})
+            ref.update(
+                {**_serialize(payload), "updated_at": firestore.SERVER_TIMESTAMP},
+                retry=None,
+                timeout=self.operation_timeout,
+            )
             return self.get(collection, doc_id)
         except Exception as exc:
             self._raise_operation_error(exc)
@@ -367,7 +390,15 @@ class FirestoreStore:
 
         def operation(transaction):
             current = self._transaction_document(transaction, ref)
-            duplicates = [snapshot for snapshot in transaction.get(query) if snapshot.id != doc_id]
+            duplicates = [
+                snapshot
+                for snapshot in transaction.get(
+                    query,
+                    retry=None,
+                    timeout=self.operation_timeout,
+                )
+                if snapshot.id != doc_id
+            ]
             if current is None or not current.exists:
                 raise StoreNotFound("Record not found")
             if duplicates:
@@ -385,16 +416,22 @@ class FirestoreStore:
     def delete(self, collection: str, doc_id: str) -> bool:
         try:
             ref = self.db.collection(collection).document(doc_id)
-            if not ref.get().exists:
+            if not ref.get(retry=None, timeout=self.operation_timeout).exists:
                 return False
-            ref.delete()
+            ref.delete(retry=None, timeout=self.operation_timeout)
             return True
         except Exception as exc:
             self._raise_operation_error(exc)
 
     def find(self, collection: str, **filters) -> List[Dict[str, Any]]:
         try:
-            return [self._document(doc) for doc in self._query(collection, filters).stream()]
+            return [
+                self._document(doc)
+                for doc in self._query(collection, filters).stream(
+                    retry=None,
+                    timeout=self.operation_timeout,
+                )
+            ]
         except Exception as exc:
             self._raise_operation_error(exc)
 
@@ -407,7 +444,17 @@ class FirestoreStore:
         def operation(transaction):
             tenant = self._transaction_document(transaction, tenant_ref)
             shop = self._transaction_document(transaction, shop_ref)
-            active = list(transaction.get(active_query)) if payload.get("status") == "active" else []
+            active = (
+                list(
+                    transaction.get(
+                        active_query,
+                        retry=None,
+                        timeout=self.operation_timeout,
+                    )
+                )
+                if payload.get("status") == "active"
+                else []
+            )
             if tenant is None or not tenant.exists:
                 raise StoreNotFound("Tenant not found")
             if shop is None or not shop.exists:
@@ -439,7 +486,17 @@ class FirestoreStore:
             current_snapshot = self._transaction_document(transaction, tenancy_ref)
             tenant_snapshot = self._transaction_document(transaction, tenant_ref)
             new_shop_snapshot = self._transaction_document(transaction, new_shop_ref)
-            active = list(transaction.get(active_query)) if payload.get("status") == "active" else []
+            active = (
+                list(
+                    transaction.get(
+                        active_query,
+                        retry=None,
+                        timeout=self.operation_timeout,
+                    )
+                )
+                if payload.get("status") == "active"
+                else []
+            )
             if current_snapshot is None or not current_snapshot.exists:
                 raise StoreNotFound("Tenancy not found")
             if tenant_snapshot is None or not tenant_snapshot.exists:

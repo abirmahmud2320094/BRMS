@@ -13,6 +13,8 @@ services:
         value: firebase
       - key: DATA_MODE
         value: firebase
+      - key: FIREBASE_OPERATION_TIMEOUT_SECONDS
+        value: "5"
       - key: FIREBASE_PROJECT_ID
         sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_JSON

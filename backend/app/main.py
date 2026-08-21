@@ -6,17 +6,17 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.api import auth, modules, dashboard, users, system
 from app.services.seed import seed_demo_data
-from app.services.store import StoreConflict, StoreError, StoreNotFound, StoreUnavailable, get_store
+from app.services.store import StoreConflict, StoreError, StoreNotFound, StoreUnavailable
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Firebase/Firestore network access is deliberately lazy. A remote query here
+    # prevents the ASGI lifespan from completing when an external service is slow.
     if settings.auth_mode.lower() == "demo" and settings.data_mode.lower() == "local":
         seed_demo_data(force=False)
-    else:
-        get_store().health_check()
     yield
 
 
