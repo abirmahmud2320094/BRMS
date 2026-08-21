@@ -5,11 +5,11 @@ BRMS is a React, FastAPI, Firebase Authentication, and Cloud Firestore applicati
 ## Architecture
 
 ```text
-React + Vite
+Firebase Hosting (React + Vite)
     ↓ Firebase email/password authentication
 Firebase ID token
     ↓ Authorization: Bearer <token>
-FastAPI validation and role enforcement
+Render (FastAPI validation and role enforcement)
     ↓ Firebase Admin SDK
 Cloud Firestore
 ```
@@ -74,6 +74,24 @@ While running:
 - Health: `http://127.0.0.1:8000/api/v1/system/health`
 
 The health response must report `"auth_mode": "firebase"` and `"data_mode": "firebase"`.
+
+## Production
+
+- Frontend: `https://builing-rent-management-system.web.app`
+- Backend: `https://brms-api-h2qf.onrender.com`
+- API: `https://brms-api-h2qf.onrender.com/api/v1`
+- Authentication: Firebase Authentication
+- Database: Cloud Firestore through the Render backend
+
+Deploy a tested production frontend from the repository root with:
+
+```bash
+./scripts/deploy-frontend.sh
+```
+
+The helper validates the production API setting, runs frontend tests, builds a
+fresh Vite bundle, and deploys Firebase Hosting only. Free Render instances may
+take longer to answer the first API request after a period of inactivity.
 
 ## Optional offline test fixtures
 

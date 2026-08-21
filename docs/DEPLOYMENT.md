@@ -1,6 +1,15 @@
-# Deployment Preparation
+# Production Deployment
 
-Public deployment is intentionally not performed by the local authentication migration.
+The production architecture is:
+
+```text
+Firebase Hosting → React/Vite → Firebase Authentication
+                 → Render/FastAPI → Cloud Firestore
+```
+
+- Frontend: `https://builing-rent-management-system.web.app`
+- Backend: `https://brms-api-h2qf.onrender.com`
+- API base URL: `https://brms-api-h2qf.onrender.com/api/v1`
 
 ## Backend
 
@@ -45,6 +54,28 @@ VITE_FIREBASE_APP_ID=your-app-id
 ```
 
 Then run `npm run build`. Firebase Web configuration is client-visible by design; Firebase Admin credentials remain server-only.
+
+For a verified Hosting-only release, run from the project root:
+
+```bash
+./scripts/deploy-frontend.sh
+```
+
+The root `firebase.json` serves `frontend/dist` and rewrites all React routes to
+`/index.html`. It retains Firestore and Storage configuration paths, but the
+deployment helper uses `--only hosting` and does not redeploy their rules.
+
+Render must explicitly allow both Firebase Hosting domains while preserving
+the local development origins:
+
+```env
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,https://builing-rent-management-system.web.app,https://builing-rent-management-system.firebaseapp.com
+```
+
+The Firebase Authentication authorized-domain list must include
+`builing-rent-management-system.web.app`. Free Render instances can have a
+noticeable cold start on the first request after inactivity; no artificial
+keep-alive loop is required.
 
 ## Account provisioning
 

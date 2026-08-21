@@ -1,0 +1,29 @@
+.DS_Store
+*.log
+
+# Local environment files (examples remain tracked)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python
+backend/.venv/
+backend/**/__pycache__/
+backend/**/*.py[cod]
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+
+# Local backend state and Firebase Admin credentials
+backend/data/*.json
+backend/secrets/
+
+# Frontend generated dependencies and build output
+frontend/node_modules/
+frontend/dist/
+
+# Firebase CLI caches
+.firebase/
+firebase/.firebase/
+firebase/firebase-debug.log
+frontend/firebase-debug.log

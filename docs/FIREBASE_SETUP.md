@@ -41,7 +41,32 @@ VITE_FIREBASE_APP_ID=your-app-id
 
 Firebase Web SDK identifiers are public client configuration. Firebase Admin private keys, `client_email`, and service-account JSON are backend-only.
 
-## 4. Authorized users
+## 4. Firebase CLI
+
+The Firebase configuration is stored at the repository root, not `frontend/`. Use the
+project-pinned CLI command from the frontend directory; it does not require a
+global npm installation or administrator permissions:
+
+```bash
+cd frontend
+npm run firebase:use
+```
+
+To deploy after a successful build:
+
+```bash
+npm run firebase:deploy
+```
+
+The equivalent direct command must be run from the Firebase configuration
+directory:
+
+```bash
+cd /path/to/BRMS
+npx --yes firebase-tools@15.28.1 use builing-rent-management-system
+```
+
+## 5. Authorized users
 
 Each Firebase Authentication account must have a matching Firestore profile at `users/{firebase_uid}`:
 
@@ -58,7 +83,7 @@ Supported roles are `administrator`, `building_manager`, and `accountant`. An ab
 
 Manager and Accountant accounts can be provisioned idempotently with `backend/create_initial_users.py`; passwords must be supplied through ignored environment variables.
 
-## 5. Start and verify
+## 6. Start and verify
 
 ```bash
 ./scripts/start-real.sh

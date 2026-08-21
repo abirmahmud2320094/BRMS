@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "test": "node --test",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "firebase:use": "npx --yes firebase-tools@15.28.1 use builing-rent-management-system --config ../firebase.json",
+    "firebase:deploy": "npm run build && npx --yes firebase-tools@15.28.1 deploy --only hosting --config ../firebase.json --project builing-rent-management-system"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",

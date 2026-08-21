@@ -1,7 +1,11 @@
 import { getApiErrorMessage } from '../utils/apiError.js'
 
 const viteEnv = import.meta.env || {}
-const API_URL = viteEnv.VITE_API_BASE_URL || viteEnv.VITE_API_URL || 'http://127.0.0.1:8000/api/v1'
+const API_URL = viteEnv.VITE_API_BASE_URL || viteEnv.VITE_API_URL || ''
+
+if (!API_URL && typeof window !== 'undefined') {
+  throw new Error('VITE_API_BASE_URL is not configured')
+}
 
 let tokenProvider = async () => null
 let unauthorizedHandler = async () => {}
