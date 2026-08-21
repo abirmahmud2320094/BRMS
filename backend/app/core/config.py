@@ -14,6 +14,10 @@ class Settings(BaseSettings):
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     ]
+    firebase_hosting_origins: Union[List[str], str] = [
+        "https://builing-rent-management-system.web.app",
+        "https://builing-rent-management-system.firebaseapp.com",
+    ]
 
     auth_mode: str = "firebase"
     data_mode: str = "firebase"
@@ -35,7 +39,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    @field_validator("cors_origins", mode="before")
+    @field_validator("cors_origins", "firebase_hosting_origins", mode="before")
     @classmethod
     def parse_cors(cls, value):
         if isinstance(value, str):
@@ -46,6 +50,10 @@ class Settings(BaseSettings):
             ]
 
         return value
+
+    @property
+    def allowed_cors_origins(self) -> List[str]:
+        return list(dict.fromkeys([*self.cors_origins, *self.firebase_hosting_origins]))
 
     @field_validator("auth_mode")
     @classmethod

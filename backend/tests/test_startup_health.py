@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
+from fastapi.testclient import TestClient
 
 
 def test_firebase_lifespan_does_not_touch_firestore(monkeypatch):
@@ -65,3 +66,29 @@ def test_readiness_sanitizes_store_failures(monkeypatch):
         system.readiness()
     assert exc_info.value.status_code == 503
     assert exc_info.value.detail == "The configured data store is temporarily unavailable"
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "https://builing-rent-management-system.web.app",
+        "https://builing-rent-management-system.firebaseapp.com",
+    ],
+)
+def test_production_hosting_origins_are_allowed(origin):
+    from app.main import app
+
+    client = TestClient(app)
+    try:
+        response = client.options(
+            "/api/v1/system/health",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+    finally:
+        client.close()
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == origin
