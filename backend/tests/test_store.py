@@ -115,14 +115,22 @@ def test_firestore_records_are_json_safe():
     assert collection.stream_kwargs == {"retry": None, "timeout": 4.0}
 
 
-def test_firestore_connectivity_errors_are_sanitized():
+def test_firestore_connectivity_errors_are_sanitized(caplog):
     store = object.__new__(FirestoreStore)
-    collection = FakeCollection(error=RuntimeError("sensitive provider details"))
+    collection = FakeCollection(
+        error=RuntimeError(
+            "invalid_grant: Invalid JWT Signature. sensitive provider details"
+        )
+    )
     store.db = FakeFirestoreClient(collection)
     store.operation_timeout = 2.5
-    with pytest.raises(StoreUnavailable, match="connectivity, credentials, and required indexes"):
-        store.health_check()
+    with caplog.at_level("ERROR", logger="app.services.store"):
+        with pytest.raises(StoreUnavailable, match="connectivity, credentials, and required indexes"):
+            store.health_check()
     assert collection.stream_kwargs == {"retry": None, "timeout": 2.5}
+    assert "operation=health_check" in caplog.text
+    assert "reason=firebase_admin_credentials_rejected" in caplog.text
+    assert "sensitive provider details" not in caplog.text
 
 
 def test_firestore_transaction_document_unwraps_sdk_generator():

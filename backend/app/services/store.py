@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import uuid
 from copy import deepcopy
@@ -9,6 +10,8 @@ from typing import Any, Dict, List, Optional
 
 from app.core.config import get_settings
 from app.core.firebase import get_firestore_client
+
+logger = logging.getLogger(__name__)
 
 COLLECTIONS = [
     "users",
@@ -37,6 +40,27 @@ class StoreNotFound(StoreError):
 
 class StoreUnavailable(StoreError):
     pass
+
+
+def _safe_firestore_failure_reason(exc: Exception) -> str:
+    """Classify provider failures without logging credentials or request data."""
+    chain = []
+    current = exc
+    while current is not None and len(chain) < 8:
+        chain.append(f"{type(current).__name__} {current}".lower())
+        current = current.__cause__ or current.__context__
+    message = " ".join(chain)
+    if "invalid jwt signature" in message or "invalid_grant" in message:
+        return "firebase_admin_credentials_rejected"
+    if "deadline exceeded" in message or "deadlineexceeded" in message:
+        return "firestore_timeout"
+    if "permission denied" in message or "permissiondenied" in message:
+        return "firestore_permission_denied"
+    if "unauthenticated" in message:
+        return "firebase_admin_unauthenticated"
+    if "unavailable" in message or "serviceunavailable" in message:
+        return "firestore_unavailable"
+    return "firestore_external_error"
 
 
 def _utc_now() -> str:
@@ -268,6 +292,11 @@ class FirestoreStore:
         try:
             self.db = get_firestore_client()
         except Exception as exc:
+            logger.error(
+                "Cloud Firestore failure: operation=initialize reason=%s exception_type=%s",
+                _safe_firestore_failure_reason(exc),
+                type(exc).__name__,
+            )
             raise StoreUnavailable(
                 "Cloud Firestore initialization failed. Check FIREBASE_PROJECT_ID and Firebase Admin credentials."
             ) from exc
@@ -294,9 +323,15 @@ class FirestoreStore:
     def _document(self, snapshot) -> Dict[str, Any]:
         return _record(snapshot.id, snapshot.to_dict() or {})
 
-    def _raise_operation_error(self, exc):
+    def _raise_operation_error(self, exc, operation: str = "operation"):
         if isinstance(exc, StoreError):
             raise exc
+        logger.error(
+            "Cloud Firestore failure: operation=%s reason=%s exception_type=%s",
+            operation,
+            _safe_firestore_failure_reason(exc),
+            type(exc).__name__,
+        )
         raise StoreUnavailable(
             "Cloud Firestore operation failed. Check connectivity, credentials, and required indexes."
         ) from exc
@@ -312,7 +347,7 @@ class FirestoreStore:
             )
             return True
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, "health_check")
 
     def list(self, collection: str) -> List[Dict[str, Any]]:
         try:
@@ -324,7 +359,7 @@ class FirestoreStore:
                 )
             ]
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, f"list:{collection}")
 
     def get(self, collection: str, doc_id: str) -> Optional[Dict[str, Any]]:
         try:
@@ -334,7 +369,7 @@ class FirestoreStore:
             )
             return self._document(snapshot) if snapshot.exists else None
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, f"get:{collection}")
 
     def create(self, collection: str, payload: dict, doc_id: Optional[str] = None) -> dict:
         try:
@@ -347,7 +382,7 @@ class FirestoreStore:
             ref.create(data, retry=None, timeout=self.operation_timeout)
             return self.get(collection, ref.id)
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, f"create:{collection}")
 
     def create_unique(self, collection: str, payload: dict, unique_filters: dict, detail: str) -> dict:
         ref = self.db.collection(collection).document()
@@ -366,7 +401,7 @@ class FirestoreStore:
             self._run_transaction(operation)
             return self.get(collection, ref.id)
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, f"create_unique:{collection}")
 
     def update(self, collection: str, doc_id: str, payload: dict) -> Optional[dict]:
         try:
@@ -382,7 +417,7 @@ class FirestoreStore:
             )
             return self.get(collection, doc_id)
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, f"update:{collection}")
 
     def update_unique(self, collection: str, doc_id: str, payload: dict, unique_filters: dict, detail: str) -> dict:
         ref = self.db.collection(collection).document(doc_id)
@@ -411,7 +446,7 @@ class FirestoreStore:
             self._run_transaction(operation)
             return self.get(collection, doc_id)
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, f"update_unique:{collection}")
 
     def delete(self, collection: str, doc_id: str) -> bool:
         try:
@@ -421,7 +456,7 @@ class FirestoreStore:
             ref.delete(retry=None, timeout=self.operation_timeout)
             return True
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, f"delete:{collection}")
 
     def find(self, collection: str, **filters) -> List[Dict[str, Any]]:
         try:
@@ -433,7 +468,7 @@ class FirestoreStore:
                 )
             ]
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, f"find:{collection}")
 
     def create_tenancy(self, payload: dict, doc_id: Optional[str] = None) -> dict:
         tenancy_ref = self.db.collection("tenancies").document(doc_id) if doc_id else self.db.collection("tenancies").document()
@@ -474,7 +509,7 @@ class FirestoreStore:
             self._run_transaction(operation)
             return self.get("tenancies", tenancy_ref.id)
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, "create_tenancy")
 
     def update_tenancy(self, doc_id: str, payload: dict) -> dict:
         tenancy_ref = self.db.collection("tenancies").document(doc_id)
@@ -526,7 +561,7 @@ class FirestoreStore:
             self._run_transaction(operation)
             return self.get("tenancies", doc_id)
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, "update_tenancy")
 
     def end_tenancy(self, tenancy_id: str, end_date: str) -> dict:
         tenancy_ref = self.db.collection("tenancies").document(tenancy_id)
@@ -553,7 +588,7 @@ class FirestoreStore:
             self._run_transaction(operation)
             return self.get("tenancies", tenancy_id)
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, "end_tenancy")
 
     def delete_tenancy(self, tenancy_id: str) -> bool:
         """Delete an assignment and release an occupied shop in one transaction."""
@@ -580,7 +615,7 @@ class FirestoreStore:
         try:
             return bool(self._run_transaction(operation))
         except Exception as exc:
-            self._raise_operation_error(exc)
+            self._raise_operation_error(exc, "delete_tenancy")
 
 
 _store = None
